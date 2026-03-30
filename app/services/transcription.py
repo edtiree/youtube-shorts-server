@@ -29,32 +29,52 @@ def transcribe_audio(audio_path: Path, transcript_path: Path) -> list[dict]:
 
 
 def _transcribe_single(client: OpenAI, audio_path: Path) -> list[dict]:
-    """Transcribe a single audio file under 25MB."""
-    logger.info(f"Transcribing file: {audio_path} ({audio_path.stat().st_size / 1024:.0f}KB)")
-    try:
-        import httpx
-        custom_http = httpx.Client(timeout=httpx.Timeout(300.0, connect=60.0))
-        client_with_timeout = OpenAI(api_key=client.api_key, http_client=custom_http)
-        with open(audio_path, "rb") as f:
-            response = client_with_timeout.audio.transcriptions.create(
-                model=settings.whisper_model,
-                file=f,
-                response_format="verbose_json",
-                timestamp_granularities=["segment"],
-                **({"language": settings.whisper_language} if settings.whisper_language else {}),
-            )
-    except Exception as e:
-        logger.error(f"Whisper API error: {type(e).__name__}: {e}")
-        raise
+    """Transcribe a single audio file under 25MB with retry logic."""
+    import time
+    import requests as req_lib
 
-    segments = []
-    for seg in response.segments:
-        segments.append({
-            "start": seg.start,
-            "end": seg.end,
-            "text": seg.text.strip(),
-        })
-    return segments
+    logger.info(f"Transcribing file: {audio_path} ({audio_path.stat().st_size / 1024:.0f}KB)")
+
+    # 먼저 openai SDK로 시도 (3회 재시도)
+    for attempt in range(3):
+        try:
+            with open(audio_path, "rb") as f:
+                response = client.audio.transcriptions.create(
+                    model=settings.whisper_model,
+                    file=f,
+                    response_format="verbose_json",
+                    timestamp_granularities=["segment"],
+                    **({"language": settings.whisper_language} if settings.whisper_language else {}),
+                )
+            return [{"start": seg.start, "end": seg.end, "text": seg.text.strip()} for seg in response.segments]
+        except Exception as e:
+            logger.warning(f"Whisper SDK attempt {attempt+1}/3 failed: {type(e).__name__}: {e}")
+            if attempt < 2:
+                time.sleep(3 * (attempt + 1))
+            else:
+                logger.info("Falling back to direct requests API call...")
+
+    # 폴백: requests 라이브러리로 직접 호출
+    try:
+        with open(audio_path, "rb") as f:
+            resp = req_lib.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                files={"file": (audio_path.name, f, "audio/mpeg")},
+                data={
+                    "model": settings.whisper_model,
+                    "response_format": "verbose_json",
+                    "timestamp_granularities[]": "segment",
+                    **({"language": settings.whisper_language} if settings.whisper_language else {}),
+                },
+                timeout=300,
+            )
+        resp.raise_for_status()
+        data = resp.json()
+        return [{"start": s["start"], "end": s["end"], "text": s["text"].strip()} for s in data.get("segments", [])]
+    except Exception as e:
+        logger.error(f"Whisper requests fallback failed: {type(e).__name__}: {e}")
+        raise
 
 
 def _transcribe_large_audio(client: OpenAI, audio_path: Path) -> list[dict]:
