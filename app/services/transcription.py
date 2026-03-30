@@ -30,14 +30,22 @@ def transcribe_audio(audio_path: Path, transcript_path: Path) -> list[dict]:
 
 def _transcribe_single(client: OpenAI, audio_path: Path) -> list[dict]:
     """Transcribe a single audio file under 25MB."""
-    with open(audio_path, "rb") as f:
-        response = client.audio.transcriptions.create(
-            model=settings.whisper_model,
-            file=f,
-            response_format="verbose_json",
-            timestamp_granularities=["segment"],
-            **({"language": settings.whisper_language} if settings.whisper_language else {}),
-        )
+    logger.info(f"Transcribing file: {audio_path} ({audio_path.stat().st_size / 1024:.0f}KB)")
+    try:
+        import httpx
+        custom_http = httpx.Client(timeout=httpx.Timeout(300.0, connect=60.0))
+        client_with_timeout = OpenAI(api_key=client.api_key, http_client=custom_http)
+        with open(audio_path, "rb") as f:
+            response = client_with_timeout.audio.transcriptions.create(
+                model=settings.whisper_model,
+                file=f,
+                response_format="verbose_json",
+                timestamp_granularities=["segment"],
+                **({"language": settings.whisper_language} if settings.whisper_language else {}),
+            )
+    except Exception as e:
+        logger.error(f"Whisper API error: {type(e).__name__}: {e}")
+        raise
 
     segments = []
     for seg in response.segments:
