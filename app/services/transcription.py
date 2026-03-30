@@ -11,7 +11,7 @@ def transcribe_audio(audio_path: Path, transcript_path: Path) -> list[dict]:
     """Transcribe audio using OpenAI Whisper API. Returns list of segments."""
     logger.info(f"Transcribing: {audio_path}")
 
-    client = OpenAI(api_key=settings.openai_api_key)
+    client = OpenAI(api_key=settings.openai_api_key, timeout=300.0)
     file_size_mb = audio_path.stat().st_size / (1024 * 1024)
 
     if file_size_mb > 25:

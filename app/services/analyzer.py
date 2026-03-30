@@ -35,7 +35,7 @@ def analyze_transcript(
     """Use OpenAI GPT to analyze transcript and identify viral-worthy segments."""
     logger.info(f"Analyzing transcript with GPT ({len(transcript)} segments)")
 
-    client = OpenAI(api_key=settings.openai_api_key)
+    client = OpenAI(api_key=settings.openai_api_key, timeout=300.0)
 
     # Format transcript
     formatted = _format_transcript(transcript)

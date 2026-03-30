@@ -84,8 +84,7 @@ async def process_video(job_id: str, req: ProcessRequest = ProcessRequest()):
     # Validate API keys
     if not settings.openai_api_key:
         raise HTTPException(400, "OpenAI API 키가 설정되지 않았습니다. .env 파일을 확인해주세요.")
-    if not settings.anthropic_api_key:
-        raise HTTPException(400, "Anthropic API 키가 설정되지 않았습니다. .env 파일을 확인해주세요.")
+    # Anthropic 키는 선택사항 (현재 사용하지 않음)
 
     job.update_status("processing", "처리 시작...", 5)
 
