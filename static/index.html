@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Shorts Maker</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 YouTube Shorts Maker</h1>
+            <p class="subtitle">영상을 업로드하면 AI가 자동으로 바이럴 쇼츠를 만들어드립니다</p>
+        </header>
+
+        <!-- Upload View -->
+        <div id="view-upload" class="view active">
+            <div id="drop-zone" class="drop-zone">
+                <div class="drop-zone-content">
+                    <div class="upload-icon">📁</div>
+                    <p class="drop-text">영상 파일을 드래그하거나 클릭하여 업로드</p>
+                    <p class="drop-hint">MP4, MOV, AVI, MKV, WEBM (최대 5GB)</p>
+                    <input type="file" id="file-input" accept=".mp4,.mov,.avi,.mkv,.webm" hidden>
+                </div>
+            </div>
+
+            <div id="file-info" class="file-info hidden">
+                <div class="file-name" id="file-name"></div>
+                <div class="file-size" id="file-size"></div>
+            </div>
+
+            <div class="settings-panel">
+                <h3 class="settings-toggle" id="settings-toggle">⚙️ 설정 <span class="arrow">▼</span></h3>
+                <div id="settings-body" class="settings-body hidden">
+                    <div class="setting-row">
+                        <label>최대 쇼츠 수</label>
+                        <div class="slider-group">
+                            <input type="range" id="max-shorts" min="1" max="10" value="5">
+                            <span id="max-shorts-val">5</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label>최소 길이 (초)</label>
+                        <div class="slider-group">
+                            <input type="range" id="min-duration" min="10" max="50" value="15">
+                            <span id="min-duration-val">15</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label>최대 길이 (초)</label>
+                        <div class="slider-group">
+                            <input type="range" id="max-duration" min="20" max="58" value="58">
+                            <span id="max-duration-val">58</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-start" class="btn-primary" disabled>쇼츠 생성하기</button>
+        </div>
+
+        <!-- Processing View -->
+        <div id="view-processing" class="view">
+            <div class="stepper">
+                <div class="step" data-step="uploading">
+                    <div class="step-icon">⬆️</div>
+                    <div class="step-info">
+                        <div class="step-label">영상 업로드</div>
+                        <div class="step-progress" id="upload-progress"></div>
+                    </div>
+                </div>
+                <div class="step" data-step="extracting_audio">
+                    <div class="step-icon">🎵</div>
+                    <div class="step-info">
+                        <div class="step-label">오디오 추출</div>
+                    </div>
+                </div>
+                <div class="step" data-step="transcribing">
+                    <div class="step-icon">📝</div>
+                    <div class="step-info">
+                        <div class="step-label">음성 인식 (Whisper)</div>
+                    </div>
+                </div>
+                <div class="step" data-step="analyzing">
+                    <div class="step-icon">🤖</div>
+                    <div class="step-info">
+                        <div class="step-label">AI 분석 (Claude)</div>
+                    </div>
+                </div>
+                <div class="step" data-step="cutting">
+                    <div class="step-icon">✂️</div>
+                    <div class="step-info">
+                        <div class="step-label">영상 자르기</div>
+                    </div>
+                </div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <p class="progress-text" id="progress-text">준비 중...</p>
+        </div>
+
+        <!-- Error View -->
+        <div id="view-error" class="view">
+            <div class="error-card">
+                <div class="error-icon">❌</div>
+                <h2>오류가 발생했습니다</h2>
+                <p id="error-message"></p>
+                <button class="btn-primary" onclick="resetToUpload()">다시 시도</button>
+            </div>
+        </div>
+
+        <!-- Results View -->
+        <div id="view-results" class="view">
+            <div class="results-header">
+                <h2>생성된 쇼츠</h2>
+                <div class="results-actions">
+                    <button class="btn-secondary" onclick="downloadAll()">모두 다운로드</button>
+                    <button class="btn-secondary" onclick="resetToUpload()">새 영상 업로드</button>
+                </div>
+            </div>
+            <div id="shorts-grid" class="shorts-grid"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
